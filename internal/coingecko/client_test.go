@@ -11,8 +11,15 @@ import (
 
 func TestPriceReturnsFirstCoin(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("ids") != "bitcoin" {
-			t.Fatalf("ids = %q", r.URL.Query().Get("ids"))
+		q := r.URL.Query()
+		if q.Get("ids") != "bitcoin" {
+			t.Fatalf("ids = %q", q.Get("ids"))
+		}
+		if q.Get("per_page") != "1" {
+			t.Fatalf("per_page = %q, want 1 (matches docs contract)", q.Get("per_page"))
+		}
+		if q.Get("vs_currency") != "usd" {
+			t.Fatalf("vs_currency = %q, want usd", q.Get("vs_currency"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`[{"id":"bitcoin","symbol":"btc","name":"Bitcoin",
@@ -46,8 +53,15 @@ func TestPriceEmptyArrayIsError(t *testing.T) {
 
 func TestMarketUsesOrderParam(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("order") != "volume_desc" {
-			t.Fatalf("order = %q", r.URL.Query().Get("order"))
+		q := r.URL.Query()
+		if q.Get("order") != "volume_desc" {
+			t.Fatalf("order = %q", q.Get("order"))
+		}
+		if q.Get("per_page") != "20" {
+			t.Fatalf("per_page = %q, want 20", q.Get("per_page"))
+		}
+		if q.Get("vs_currency") != "usd" {
+			t.Fatalf("vs_currency = %q, want usd", q.Get("vs_currency"))
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`[{"id":"bitcoin","symbol":"btc","name":"Bitcoin","current_price":1}]`))

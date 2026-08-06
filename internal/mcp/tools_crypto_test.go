@@ -8,9 +8,10 @@ import (
 )
 
 type fakeCryptoClient struct {
-	price coingecko.Price
-	list  []coingecko.Price
-	err   error
+	price         coingecko.Price
+	list          []coingecko.Price
+	err           error
+	lastMarketCat string
 }
 
 func (f *fakeCryptoClient) Price(_ context.Context, id string) (coingecko.Price, error) {
@@ -18,6 +19,7 @@ func (f *fakeCryptoClient) Price(_ context.Context, id string) (coingecko.Price,
 }
 
 func (f *fakeCryptoClient) Market(_ context.Context, category string) ([]coingecko.Price, error) {
+	f.lastMarketCat = category
 	return f.list, f.err
 }
 
@@ -56,5 +58,19 @@ func TestCryptoMarketCallDefaultsCategory(t *testing.T) {
 	}
 	if len(out.([]coingecko.Price)) != 1 {
 		t.Fatalf("unexpected list: %+v", out)
+	}
+	if c.lastMarketCat != "most-active" {
+		t.Fatalf("default category forwarded = %q, want most-active", c.lastMarketCat)
+	}
+}
+
+func TestCryptoMarketCallForwardsCategory(t *testing.T) {
+	c := &fakeCryptoClient{list: []coingecko.Price{{ID: "bitcoin"}}}
+	tools := CryptoTools(c)
+	if _, err := tools[1].Call(context.Background(), map[string]any{"category": "gainers"}); err != nil {
+		t.Fatalf("Call error: %v", err)
+	}
+	if c.lastMarketCat != "gainers" {
+		t.Fatalf("forwarded category = %q, want gainers", c.lastMarketCat)
 	}
 }
