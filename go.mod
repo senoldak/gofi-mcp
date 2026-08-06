@@ -1,3 +1,3 @@
 module github.com/senoldak/gofi-mcp
 
-go 1.26.5
+go 1.25
