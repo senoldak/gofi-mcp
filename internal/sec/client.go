@@ -38,7 +38,7 @@ func (c *Client) Financials(ctx context.Context, ticker string) (Financials, err
 	if err != nil {
 		return Financials{}, fmt.Errorf("sec companyfacts: %w", err)
 	}
-	return normalizeFinancials(cik, body)
+	return normalizeFinancials(ticker, body)
 }
 
 func (c *Client) lookupCIK(ctx context.Context, ticker string) (string, error) {

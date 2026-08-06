@@ -23,6 +23,13 @@ type Financials struct {
 	Periods []Period `json:"periods"`
 }
 
+type factRecord struct {
+	Val  float64 `json:"val"`
+	FY   int     `json:"fy"`
+	FP   string  `json:"fp"`
+	Form string  `json:"form"`
+}
+
 type usGaapField struct {
 	tags []string
 	unit string
@@ -34,7 +41,7 @@ type usGaapField struct {
 // RevenueFromContractWithCustomerExcludingAssessedTax while others still use
 // Revenues, and liabilities under Liabilities instead of TotalLiabilities.
 var usGaapFields = []usGaapField{
-	{tags: []string{"RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues"}, unit: "USD", set: func(p *Period, v float64) { p.Revenue = v }},
+	{tags: []string{"RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues", "SalesRevenueNet"}, unit: "USD", set: func(p *Period, v float64) { p.Revenue = v }},
 	{tags: []string{"NetIncomeLoss"}, unit: "USD", set: func(p *Period, v float64) { p.NetIncome = v }},
 	{tags: []string{"EarningsPerShareBasic"}, unit: "USD/shares", set: func(p *Period, v float64) { p.EPS = v }},
 	{tags: []string{"Assets"}, unit: "USD", set: func(p *Period, v float64) { p.TotalAssets = v }},
@@ -42,16 +49,15 @@ var usGaapFields = []usGaapField{
 	{tags: []string{"NetCashProvidedByUsedInOperatingActivities"}, unit: "USD", set: func(p *Period, v float64) { p.OperatingCashFlow = v }},
 }
 
-func normalizeFinancials(cik string, raw []byte) (Financials, error) {
+// unitFallback defines a deterministic unit preference when the preferred
+// unit is missing (e.g. filers using nonstandard units like XYZ).
+var unitFallback = []string{"USD", "USD/shares"}
+
+func normalizeFinancials(ticker string, raw []byte) (Financials, error) {
 	var doc struct {
 		Facts struct {
 			UsGAAP map[string]struct {
-				Units map[string][]struct {
-					Val  float64 `json:"val"`
-					FY   int     `json:"fy"`
-					FP   string  `json:"fp"`
-					Form string  `json:"form"`
-				} `json:"units"`
+				Units map[string][]factRecord `json:"units"`
 			} `json:"us-gaap"`
 		} `json:"facts"`
 	}
@@ -61,17 +67,15 @@ func normalizeFinancials(cik string, raw []byte) (Financials, error) {
 
 	periods := map[string]Period{}
 	for _, field := range usGaapFields {
+		matched := false
 		for _, tag := range field.tags {
 			gaap, ok := doc.Facts.UsGAAP[tag]
 			if !ok {
 				continue
 			}
-			recs, ok := gaap.Units[field.unit]
-			if !ok {
-				for _, u := range gaap.Units {
-					recs = u
-					break
-				}
+			recs := pickUnit(gaap.Units, field.unit)
+			if recs == nil {
+				continue
 			}
 			for _, rec := range recs {
 				if rec.Form != "10-K" || rec.FP != "FY" {
@@ -84,8 +88,11 @@ func normalizeFinancials(cik string, raw []byte) (Financials, error) {
 				}
 				field.set(&p, rec.Val)
 				periods[key] = p
+				matched = true
 			}
-			break
+			if matched {
+				break
+			}
 		}
 	}
 
@@ -97,5 +104,25 @@ func normalizeFinancials(cik string, raw []byte) (Financials, error) {
 	if len(out) > 5 {
 		out = out[:5]
 	}
-	return Financials{Ticker: cik, Periods: out}, nil
+	return Financials{Ticker: ticker, Periods: out}, nil
+}
+
+// pickUnit returns the unit slice for the preferred unit, falling back to
+// other known units in a deterministic order, then to the first available.
+func pickUnit(units map[string][]factRecord, preferred string) []factRecord {
+	if recs, ok := units[preferred]; ok {
+		return recs
+	}
+	for _, u := range unitFallback {
+		if u == preferred {
+			continue
+		}
+		if recs, ok := units[u]; ok {
+			return recs
+		}
+	}
+	for _, recs := range units {
+		return recs
+	}
+	return nil
 }

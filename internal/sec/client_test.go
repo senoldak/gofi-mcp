@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/senoldak/gofi-mcp/internal/httpget"
@@ -57,6 +56,27 @@ func TestNormalizeFinancials(t *testing.T) {
 	}
 }
 
+func TestFinancialsReturnsTickerNotCIK(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/files/company_tickers.json":
+			w.Write([]byte(`{"0":{"cik_str":320193,"ticker":"AAPL","title":"Apple Inc."}}`))
+		case "/api/xbrl/companyfacts/CIK0000320193.json":
+			w.Write([]byte(`{"facts":{"us-gaap":{}}}`))
+		}
+	}))
+	defer srv.Close()
+
+	c := &Client{inner: httpget.New(srv.URL), tickers: httpget.New(srv.URL), userAgent: "Agent/1.0 test@example.com"}
+	f, err := c.Financials(context.Background(), "AAPL")
+	if err != nil {
+		t.Fatalf("Financials error: %v", err)
+	}
+	if f.Ticker != "AAPL" {
+		t.Fatalf("Ticker = %q, want AAPL (not CIK)", f.Ticker)
+	}
+}
+
 func TestFinancialsFetchesCompanyfacts(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("User-Agent") != "Agent/1.0 test@example.com" {
@@ -78,8 +98,59 @@ func TestFinancialsFetchesCompanyfacts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Financials error: %v", err)
 	}
-	if !strings.HasPrefix(f.Ticker, "0000320193") {
-		t.Fatalf("Ticker = %q", f.Ticker)
+	if f.Ticker != "AAPL" {
+		t.Fatalf("Ticker = %q, want AAPL", f.Ticker)
+	}
+}
+
+func TestNormalizeFallsThroughTagWithNoAnnualRecords(t *testing.T) {
+	raw := []byte(`{
+		"cik": 320193,
+		"entityName": "APPLE INC",
+		"facts": {
+			"us-gaap": {
+				"RevenueFromContractWithCustomerExcludingAssessedTax": {"units": {"USD": [
+					{"end": "2025-06-28", "val": 94000, "fy": 2025, "fp": "Q3", "form": "10-Q"}
+				]}},
+				"Revenues": {"units": {"USD": [
+					{"end": "2024-09-28", "val": 391000000000, "fy": 2024, "fp": "FY", "form": "10-K"}
+				]}}
+			}
+		}
+	}`)
+	f, err := normalizeFinancials("0000320193", raw)
+	if err != nil {
+		t.Fatalf("normalizeFinancials error: %v", err)
+	}
+	if len(f.Periods) != 1 {
+		t.Fatalf("len(Periods) = %d, want 1", len(f.Periods))
+	}
+	if f.Periods[0].Revenue != 391000000000 {
+		t.Fatalf("Revenue = %v, want 391000000000 (fell through to Revenues)", f.Periods[0].Revenue)
+	}
+}
+
+func TestNormalizeUsesExplicitUSDSharesFallback(t *testing.T) {
+	raw := []byte(`{
+		"cik": 320193,
+		"entityName": "APPLE INC",
+		"facts": {
+			"us-gaap": {
+				"EarningsPerShareBasic": {"units": {"XYZ": [
+					{"end": "2025-09-27", "val": 6.1, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}}
+			}
+		}
+	}`)
+	f, err := normalizeFinancials("0000320193", raw)
+	if err != nil {
+		t.Fatalf("normalizeFinancials error: %v", err)
+	}
+	if len(f.Periods) != 1 {
+		t.Fatalf("len(Periods) = %d, want 1", len(f.Periods))
+	}
+	if f.Periods[0].EPS != 6.1 {
+		t.Fatalf("EPS = %v, want 6.1 (fell through USD/shares to XYZ)", f.Periods[0].EPS)
 	}
 }
 
