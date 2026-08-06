@@ -127,21 +127,22 @@ claude mcp add gofi -e GOFI_URL=https://finance.hermestech.uk -- /path/to/gofi-m
 
 ### opencode
 
-Add the following configuration to `opencode.json`:
+Add the following configuration to `opencode.json` (in your project root or `~/.config/opencode/opencode.json`):
 
 ```json
 {
   "mcp": {
     "gofi": {
-      "type": "stdio",
-      "command": ["gofi-mcp"],
-      "env": {
+      "type": "local",
+      "command": ["go", "run", "./cmd/gofi-mcp"],
+      "environment": {
         "GOFI_URL": "https://finance.hermestech.uk"
       }
     }
   }
 }
 ```
+*Note: If using a compiled binary instead of `go run`, replace `["go", "run", "./cmd/gofi-mcp"]` with `["/path/to/gofi-mcp"]`.*
 
 ### Cursor / Windsurf / Antigravity / Roo Code (VS Code)
 
