@@ -39,9 +39,20 @@ func TestGetReturnsErrorOnNon200(t *testing.T) {
 }
 
 func TestNewTrimsTrailingSlash(t *testing.T) {
-	c := New("http://localhost:8080/")
-	got, err := c.Get(context.Background(), "/v1/quote/GOOGL:NASDAQ")
-	if got == nil && err == nil {
-		t.Fatal("expected a request to succeed against a trimmable base")
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/quote/X" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Write([]byte(`{"ok":true}`))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL + "/")
+	body, err := c.Get(context.Background(), "/v1/quote/X")
+	if err != nil {
+		t.Fatalf("Get returned error after trim: %v", err)
+	}
+	if string(body) != `{"ok":true}` {
+		t.Fatalf("body = %q, want trimmed base URL to hit the server", body)
 	}
 }
