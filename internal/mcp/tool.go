@@ -15,12 +15,15 @@ func stringArg(args map[string]any, key string) string {
 }
 
 func schema(description string, required []string, props map[string]any) map[string]any {
-	return map[string]any{
+	s := map[string]any{
 		"type":        "object",
 		"properties":  props,
-		"required":    required,
 		"description": description,
 	}
+	if required != nil {
+		s["required"] = required
+	}
+	return s
 }
 
 func strProp(description string) map[string]any {

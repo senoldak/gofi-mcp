@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "gofi": {
+      "command": "c:\\DEPO\\KOD DEPOSU\\GOFI-MCP\\gofi-mcp.exe",
+      "args": [],
+      "env": {
+        "GOFI_URL": "https://finance.hermestech.uk"
+      }
+    }
+  }
+}
