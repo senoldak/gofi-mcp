@@ -9,17 +9,23 @@ import (
 	"github.com/senoldak/gofi-mcp/internal/httpget"
 )
 
-const baseURL = "https://data.sec.gov"
+const (
+	dataURL    = "https://data.sec.gov"
+	tickersURL = "https://www.sec.gov"
+)
 
 type Client struct {
 	inner     *httpget.Client
+	tickers   *httpget.Client
 	userAgent string
 }
 
 func New(userAgent string) *Client {
-	c := httpget.New(baseURL)
-	c.Header.Set("User-Agent", userAgent)
-	return &Client{inner: c, userAgent: userAgent}
+	inner := httpget.New(dataURL)
+	inner.Header.Set("User-Agent", userAgent)
+	tickers := httpget.New(tickersURL)
+	tickers.Header.Set("User-Agent", userAgent)
+	return &Client{inner: inner, tickers: tickers, userAgent: userAgent}
 }
 
 func (c *Client) Financials(ctx context.Context, ticker string) (Financials, error) {
@@ -36,7 +42,12 @@ func (c *Client) Financials(ctx context.Context, ticker string) (Financials, err
 }
 
 func (c *Client) lookupCIK(ctx context.Context, ticker string) (string, error) {
-	body, err := c.inner.Get(ctx, "/files/company_tickers.json")
+	tickers := c.tickers
+	if tickers == nil {
+		tickers = c.inner
+	}
+	tickers.Header.Set("User-Agent", c.userAgent)
+	body, err := tickers.Get(ctx, "/files/company_tickers.json")
 	if err != nil {
 		return "", fmt.Errorf("sec tickers: %w", err)
 	}

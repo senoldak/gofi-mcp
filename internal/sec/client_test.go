@@ -73,12 +73,28 @@ func TestFinancialsFetchesCompanyfacts(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := &Client{inner: httpget.New(srv.URL), userAgent: "Agent/1.0 test@example.com"}
+	c := &Client{inner: httpget.New(srv.URL), tickers: httpget.New(srv.URL), userAgent: "Agent/1.0 test@example.com"}
 	f, err := c.Financials(context.Background(), "AAPL")
 	if err != nil {
 		t.Fatalf("Financials error: %v", err)
 	}
 	if !strings.HasPrefix(f.Ticker, "0000320193") {
 		t.Fatalf("Ticker = %q", f.Ticker)
+	}
+}
+
+func TestNewUsesSeparateHosts(t *testing.T) {
+	c := New("Agent/1.0 test@example.com")
+	if c.inner.BaseURL != "https://data.sec.gov" {
+		t.Fatalf("inner BaseURL = %q, want https://data.sec.gov", c.inner.BaseURL)
+	}
+	if c.tickers.BaseURL != "https://www.sec.gov" {
+		t.Fatalf("tickers BaseURL = %q, want https://www.sec.gov", c.tickers.BaseURL)
+	}
+	if c.inner.Header.Get("User-Agent") != "Agent/1.0 test@example.com" {
+		t.Fatalf("inner User-Agent = %q", c.inner.Header.Get("User-Agent"))
+	}
+	if c.tickers.Header.Get("User-Agent") != "Agent/1.0 test@example.com" {
+		t.Fatalf("tickers User-Agent = %q", c.tickers.Header.Get("User-Agent"))
 	}
 }
