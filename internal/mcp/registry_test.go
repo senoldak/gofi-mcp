@@ -22,17 +22,18 @@ func (f *fakeFetcher) Get(_ context.Context, path string) ([]byte, error) {
 	return f.body, nil
 }
 
-func TestRegistryListsFifteenTools(t *testing.T) {
+func TestRegistryListsSixteenTools(t *testing.T) {
 	r := NewRegistry(&fakeFetcher{})
 	tools := r.List()
-	if len(tools) != 15 {
-		t.Fatalf("expected 15 tools, got %d", len(tools))
+	if len(tools) != 16 {
+		t.Fatalf("expected 16 tools, got %d", len(tools))
 	}
 	expected := []string{
 		"get_quote", "get_company", "get_chart", "get_financials",
 		"get_news", "get_related", "get_analyst", "get_context",
 		"get_full", "search", "market_indices", "market_movers",
 		"market_trending", "market_earnings", "market_headlines",
+		"generate_chart",
 	}
 	for i, name := range expected {
 		if tools[i].Name != name {

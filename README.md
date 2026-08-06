@@ -229,6 +229,7 @@ Below is the complete specification of all **21 supported MCP tools**, categoriz
 | `get_analyst` | Retrieves analyst price targets, consensus recommendations (Buy/Hold/Sell), and rating reports. | `ticker` (string) | None | `{"ticker": "AMZN:NASDAQ"}` |
 | `get_context` | Retrieves multi-exchange listing context and cross-market ticker availability. | `ticker` (string) | None | `{"ticker": "KCHOL:IST"}` |
 | `get_full` | Bundles quote, company profile, historical chart, and news into a single aggregated JSON payload. | `ticker` (string) | `range` (string) | `{"ticker": "ASELS:IST"}` |
+| `generate_chart` | Generates professional visual financial charts (high-res PNG image link + Mermaid.js code) for any symbol or metric. | `ticker` (string) | `title` (string), `chart_type` (`line`, `bar`), `range` (string) | `{"ticker": "NVDA:NASDAQ", "chart_type": "line"}` |
 | `search` | Searches for equities, indices, and asset symbols by company name or ticker query string. | `query` (string) | None | `{"query": "NVIDIA"}` |
 
 ### 2. Market Overview & Calendar Tools (GOFI REST API)

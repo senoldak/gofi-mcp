@@ -68,8 +68,8 @@ func TestToolsListReturnsFifteen(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &resp); err != nil {
 		t.Fatalf("bad response JSON: %v\n%s", err, out)
 	}
-	if len(resp.Result.Tools) != 15 {
-		t.Fatalf("expected 15 tools, got %d", len(resp.Result.Tools))
+	if len(resp.Result.Tools) != 16 {
+		t.Fatalf("expected 16 tools, got %d", len(resp.Result.Tools))
 	}
 }
 

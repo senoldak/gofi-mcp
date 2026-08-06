@@ -32,6 +32,7 @@ func NewRegistry(f goficlient.Fetcher) *Registry {
 		r.marketTrendingTool(),
 		r.marketEarningsTool(),
 		r.marketHeadlinesTool(),
+		ChartTool(),
 	}
 	return r
 }
