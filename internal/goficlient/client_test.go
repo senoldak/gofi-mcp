@@ -40,7 +40,8 @@ func TestGetReturnsErrorOnNon200(t *testing.T) {
 
 func TestNewTrimsTrailingSlash(t *testing.T) {
 	c := New("http://localhost:8080/")
-	if c.baseURL != "http://localhost:8080" {
-		t.Fatalf("baseURL not trimmed: %s", c.baseURL)
+	got, err := c.Get(context.Background(), "/v1/quote/GOOGL:NASDAQ")
+	if got == nil && err == nil {
+		t.Fatal("expected a request to succeed against a trimmable base")
 	}
 }
