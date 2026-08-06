@@ -39,6 +39,7 @@ func (c *Client) Series(ctx context.Context, seriesID string) (Series, error) {
 		return Series{}, fmt.Errorf("fred request: %w", err)
 	}
 	var resp struct {
+		ErrorMessage string `json:"error_message"`
 		Observations []struct {
 			Date  string `json:"date"`
 			Value string `json:"value"`
@@ -46,6 +47,9 @@ func (c *Client) Series(ctx context.Context, seriesID string) (Series, error) {
 	}
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return Series{}, fmt.Errorf("fred decode: %w", err)
+	}
+	if resp.ErrorMessage != "" {
+		return Series{}, fmt.Errorf("fred: %s", resp.ErrorMessage)
 	}
 	s := Series{Series: seriesID}
 	for _, o := range resp.Observations {

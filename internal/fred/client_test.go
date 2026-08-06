@@ -4,10 +4,28 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/senoldak/gofi-mcp/internal/httpget"
 )
+
+func TestSeriesReturnsErrorOnErrorMessage(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"error_code":400,"error_message":"Bad Request: Series does not exist"}`))
+	}))
+	defer srv.Close()
+
+	c := &Client{inner: httpget.New(srv.URL), key: "secret"}
+	s, err := c.Series(context.Background(), "DOES_NOT_EXIST")
+	if err == nil {
+		t.Fatalf("expected error, got series: %+v", s)
+	}
+	if !strings.Contains(err.Error(), "Series does not exist") {
+		t.Fatalf("error = %v, want to contain 'Series does not exist'", err)
+	}
+}
 
 func TestSeriesParsesObservations(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
