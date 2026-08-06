@@ -165,7 +165,7 @@ Add this server block to your MCP client configuration (`mcp.json` or plugin set
 
 ## 🛠️ MCP Tools Reference
 
-`gofi-mcp` exposes **up to 21 dedicated tools** to AI agents via JSON-RPC 2.0. The 15 GOFI tools below are always registered; the 6 multi-source tools are registered conditionally (see [Conditional Tool Registration](#conditional-tool-registration)).
+`gofi-mcp` exposes **up to 21 dedicated tools** to AI agents via JSON-RPC 2.0. The 15 GOFI tools below are always registered. Of the 6 multi-source tools, `fx_rate`, `crypto_price`, and `crypto_market` are always registered; `sec_financials`, `sec_filing`, and `macro_indicator` are registered only when their required environment variable is set (see [Conditional Tool Registration](#conditional-tool-registration)).
 
 ### 1. Ticker & Company Specific Tools
 
