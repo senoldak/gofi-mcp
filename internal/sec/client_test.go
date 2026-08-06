@@ -83,6 +83,53 @@ func TestFinancialsFetchesCompanyfacts(t *testing.T) {
 	}
 }
 
+func TestNormalizeRealWorldTagShapes(t *testing.T) {
+	raw := []byte(`{
+		"cik": 320193,
+		"entityName": "APPLE INC",
+		"facts": {
+			"us-gaap": {
+				"RevenueFromContractWithCustomerExcludingAssessedTax": {"units": {"USD": [
+					{"end": "2025-09-27", "val": 416161000000, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}},
+				"NetIncomeLoss": {"units": {"USD": [
+					{"end": "2025-09-27", "val": 93700000000, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}},
+				"EarningsPerShareBasic": {"units": {"USD/shares": [
+					{"end": "2025-09-27", "val": 6.1, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}},
+				"Assets": {"units": {"USD": [
+					{"end": "2025-09-27", "val": 375000000000, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}},
+				"Liabilities": {"units": {"USD": [
+					{"end": "2025-09-27", "val": 279000000000, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}},
+				"NetCashProvidedByUsedInOperatingActivities": {"units": {"USD": [
+					{"end": "2025-09-27", "val": 118000000000, "fy": 2025, "fp": "FY", "form": "10-K"}
+				]}}
+			}
+		}
+	}`)
+
+	f, err := normalizeFinancials("0000320193", raw)
+	if err != nil {
+		t.Fatalf("normalizeFinancials error: %v", err)
+	}
+	if len(f.Periods) != 1 {
+		t.Fatalf("len(Periods) = %d, want 1", len(f.Periods))
+	}
+	p := f.Periods[0]
+	if p.Revenue != 416161000000 {
+		t.Fatalf("Revenue = %v, want 416161000000 (ASC 606 tag)", p.Revenue)
+	}
+	if p.TotalLiabilities != 279000000000 {
+		t.Fatalf("TotalLiabilities = %v, want 279000000000 (Liabilities tag)", p.TotalLiabilities)
+	}
+	if p.EPS != 6.1 {
+		t.Fatalf("EPS = %v, want 6.1 (USD/shares unit)", p.EPS)
+	}
+}
+
 func TestNewUsesSeparateHosts(t *testing.T) {
 	c := New("Agent/1.0 test@example.com")
 	if c.inner.BaseURL != "https://data.sec.gov" {

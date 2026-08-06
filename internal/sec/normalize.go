@@ -23,13 +23,23 @@ type Financials struct {
 	Periods []Period `json:"periods"`
 }
 
-var usGaapTags = []string{
-	"Revenues",
-	"NetIncomeLoss",
-	"EarningsPerShareBasic",
-	"Assets",
-	"TotalLiabilities",
-	"NetCashProvidedByUsedInOperatingActivities",
+type usGaapField struct {
+	tags []string
+	unit string
+	set  func(*Period, float64)
+}
+
+// usGaapFields maps SEC US-GAAP tags to Period fields. Multiple tags are
+// tried in order because filers differ: e.g. Apple reports revenue under
+// RevenueFromContractWithCustomerExcludingAssessedTax while others still use
+// Revenues, and liabilities under Liabilities instead of TotalLiabilities.
+var usGaapFields = []usGaapField{
+	{tags: []string{"RevenueFromContractWithCustomerExcludingAssessedTax", "Revenues"}, unit: "USD", set: func(p *Period, v float64) { p.Revenue = v }},
+	{tags: []string{"NetIncomeLoss"}, unit: "USD", set: func(p *Period, v float64) { p.NetIncome = v }},
+	{tags: []string{"EarningsPerShareBasic"}, unit: "USD/shares", set: func(p *Period, v float64) { p.EPS = v }},
+	{tags: []string{"Assets"}, unit: "USD", set: func(p *Period, v float64) { p.TotalAssets = v }},
+	{tags: []string{"Liabilities", "TotalLiabilities"}, unit: "USD", set: func(p *Period, v float64) { p.TotalLiabilities = v }},
+	{tags: []string{"NetCashProvidedByUsedInOperatingActivities"}, unit: "USD", set: func(p *Period, v float64) { p.OperatingCashFlow = v }},
 }
 
 func normalizeFinancials(cik string, raw []byte) (Financials, error) {
@@ -50,35 +60,32 @@ func normalizeFinancials(cik string, raw []byte) (Financials, error) {
 	}
 
 	periods := map[string]Period{}
-	for _, tag := range usGaapTags {
-		gaap, ok := doc.Facts.UsGAAP[tag]
-		if !ok {
-			continue
-		}
-		for _, rec := range gaap.Units["USD"] {
-			if rec.Form != "10-K" || rec.FP != "FY" {
+	for _, field := range usGaapFields {
+		for _, tag := range field.tags {
+			gaap, ok := doc.Facts.UsGAAP[tag]
+			if !ok {
 				continue
 			}
-			key := strconv.Itoa(rec.FY) + ":" + rec.FP
-			p, ok := periods[key]
+			recs, ok := gaap.Units[field.unit]
 			if !ok {
-				p = Period{FiscalYear: rec.FY, FiscalPeriod: rec.FP}
+				for _, u := range gaap.Units {
+					recs = u
+					break
+				}
 			}
-			switch tag {
-			case "Revenues":
-				p.Revenue = rec.Val
-			case "NetIncomeLoss":
-				p.NetIncome = rec.Val
-			case "EarningsPerShareBasic":
-				p.EPS = rec.Val
-			case "Assets":
-				p.TotalAssets = rec.Val
-			case "TotalLiabilities":
-				p.TotalLiabilities = rec.Val
-			case "NetCashProvidedByUsedInOperatingActivities":
-				p.OperatingCashFlow = rec.Val
+			for _, rec := range recs {
+				if rec.Form != "10-K" || rec.FP != "FY" {
+					continue
+				}
+				key := strconv.Itoa(rec.FY) + ":" + rec.FP
+				p, ok := periods[key]
+				if !ok {
+					p = Period{FiscalYear: rec.FY, FiscalPeriod: rec.FP}
+				}
+				field.set(&p, rec.Val)
+				periods[key] = p
 			}
-			periods[key] = p
+			break
 		}
 	}
 
