@@ -94,6 +94,8 @@ func TestFinancialsFetchesCompanyfacts(t *testing.T) {
 	defer srv.Close()
 
 	c := &Client{inner: httpget.New(srv.URL), tickers: httpget.New(srv.URL), userAgent: "Agent/1.0 test@example.com"}
+	c.inner.Header.Set("User-Agent", "Agent/1.0 test@example.com")
+	c.tickers.Header.Set("User-Agent", "Agent/1.0 test@example.com")
 	f, err := c.Financials(context.Background(), "AAPL")
 	if err != nil {
 		t.Fatalf("Financials error: %v", err)
@@ -198,6 +200,46 @@ func TestNormalizeRealWorldTagShapes(t *testing.T) {
 	}
 	if p.EPS != 6.1 {
 		t.Fatalf("EPS = %v, want 6.1 (USD/shares unit)", p.EPS)
+	}
+}
+
+func TestTickerMapIsCached(t *testing.T) {
+	var tickerHits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/files/company_tickers.json":
+			tickerHits++
+			w.Write([]byte(`{"0":{"cik_str":320193,"ticker":"AAPL","title":"Apple Inc."},"1":{"cik_str":789019,"ticker":"MSFT","title":"Microsoft"}}`))
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer srv.Close()
+
+	c := &Client{inner: httpget.New(srv.URL), tickers: httpget.New(srv.URL), userAgent: "Agent/1.0 test@example.com"}
+
+	for i := 0; i < 5; i++ {
+		cik, err := c.lookupCIK(context.Background(), "AAPL")
+		if err != nil {
+			t.Fatalf("lookupCIK error: %v", err)
+		}
+		if cik != "0000320193" {
+			t.Fatalf("cik = %q", cik)
+		}
+	}
+	if tickerHits != 1 {
+		t.Fatalf("ticker map fetch count = %d, want 1 (should cache)", tickerHits)
+	}
+
+	cik, err := c.lookupCIK(context.Background(), "MSFT")
+	if err != nil {
+		t.Fatalf("lookupCIK MSFT error: %v", err)
+	}
+	if cik != "0000789019" {
+		t.Fatalf("MSFT cik = %q", cik)
+	}
+	if tickerHits != 1 {
+		t.Fatalf("ticker map fetch count after MSFT = %d, want 1 (cached)", tickerHits)
 	}
 }
 
