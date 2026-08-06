@@ -2,9 +2,9 @@
 
 Zero-dependency MCP (Model Context Protocol) server that exposes
 [GOFI](https://github.com/senoldak/GOFI) market data as MCP tools to any
-MCP-capable AI client (Claude Code/Cowork, opencode, Antigravity, Cursor, â€¦).
+MCP-capable AI client (Claude Code/Cowork, opencode, Antigravity, Cursor, …).
 
-Data is served over GOFI's REST API â€” no API keys, no subscriptions.
+Data is served over GOFI's REST API — no API keys, no subscriptions.
 
 ## Quick Start
 
@@ -46,7 +46,7 @@ Add to `opencode.json`:
 |---|---|
 | `get_quote` | Real-time quote for a ticker |
 | `get_company` | Company profile & valuation metrics |
-| `get_chart` | Historical price series (1Dâ€¦MAX) |
+| `get_chart` | Historical price series (1D…MAX) |
 | `get_financials` | Financial statements (quarterly/annual) |
 | `get_news` | Ticker news |
 | `get_related` | Peer companies |
