@@ -39,7 +39,7 @@ func TestFilingsParsesRecent(t *testing.T) {
 	if filings[0].Form != "10-K" || filings[0].URL == "" {
 		t.Fatalf("unexpected filing: %+v", filings[0])
 	}
-	if !strings.Contains(filings[0].URL, "/Archives/edgar/data/320193/") {
+	if !strings.Contains(filings[0].URL, "/Archives/edgar/data/320193/000032019325000095") {
 		t.Fatalf("unexpected URL: %s", filings[0].URL)
 	}
 }

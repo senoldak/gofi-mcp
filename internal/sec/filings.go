@@ -47,7 +47,7 @@ func (c *Client) Filings(ctx context.Context, ticker string) ([]Filing, error) {
 	for i := 0; i < n; i++ {
 		accn := ""
 		if i < len(recent.AccessionNumber) {
-			accn = recent.AccessionNumber[i]
+			accn = strings.ReplaceAll(recent.AccessionNumber[i], "-", "")
 		}
 		f := Filing{
 			Form:    recent.Form[i],
