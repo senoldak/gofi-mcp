@@ -1,16 +1,12 @@
 package mcp
 
-import (
-	"context"
-
-	"github.com/senoldak/gofi-mcp/internal/goficlient"
-)
+import "context"
 
 type Tool struct {
-	Name        string                                                                            `json:"name"`
-	Description string                                                                            `json:"description"`
-	InputSchema map[string]any                                                                    `json:"inputSchema"`
-	Call        func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) `json:"-"`
+	Name        string                                                      `json:"name"`
+	Description string                                                      `json:"description"`
+	InputSchema map[string]any                                              `json:"inputSchema"`
+	Call        func(ctx context.Context, args map[string]any) (any, error) `json:"-"`
 }
 
 func stringArg(args map[string]any, key string) string {

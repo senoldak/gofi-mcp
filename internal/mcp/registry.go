@@ -38,10 +38,14 @@ func NewRegistry(f goficlient.Fetcher) *Registry {
 
 func (r *Registry) List() []Tool { return r.tools }
 
+func (r *Registry) Add(t Tool) {
+	r.tools = append(r.tools, t)
+}
+
 func (r *Registry) Call(ctx context.Context, name string, args map[string]any) (any, error) {
 	for _, t := range r.tools {
 		if t.Name == name {
-			return t.Call(ctx, r.fetcher, args)
+			return t.Call(ctx, args)
 		}
 	}
 	return nil, fmt.Errorf("unknown tool: %s", name)
@@ -64,7 +68,7 @@ func (r *Registry) quoteTool() Tool {
 		Name:        "get_quote",
 		Description: "Get a real-time quote (price, change, previous close) for a ticker.",
 		InputSchema: tickerSchema("Ticker to look up."),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -79,7 +83,7 @@ func (r *Registry) companyTool() Tool {
 		Name:        "get_company",
 		Description: "Get company profile data: description, CEO, sector, market cap, P/E ratio, valuation metrics.",
 		InputSchema: tickerSchema("Ticker to look up."),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -97,7 +101,7 @@ func (r *Registry) chartTool() Tool {
 			"ticker": strProp("Ticker to look up."),
 			"range":  strProp("Chart range: 1D, 5D, 1M, 6M, YTD, 1Y, 5Y, MAX. Default: 1M."),
 		}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -120,7 +124,7 @@ func (r *Registry) financialsTool() Tool {
 			"ticker": strProp("Ticker to look up."),
 			"type":   strProp("Period type: quarterly or annual. Default: quarterly."),
 		}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -139,7 +143,7 @@ func (r *Registry) newsTool() Tool {
 		Name:        "get_news",
 		Description: "Get news articles associated with a ticker.",
 		InputSchema: tickerSchema("Ticker to look up."),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -154,7 +158,7 @@ func (r *Registry) relatedTool() Tool {
 		Name:        "get_related",
 		Description: "Get peer companies and related stocks for a ticker.",
 		InputSchema: tickerSchema("Ticker to look up."),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -169,7 +173,7 @@ func (r *Registry) analystTool() Tool {
 		Name:        "get_analyst",
 		Description: "Get analyst reports and market commentary for a ticker.",
 		InputSchema: tickerSchema("Ticker to look up."),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -184,7 +188,7 @@ func (r *Registry) contextTool() Tool {
 		Name:        "get_context",
 		Description: "Get multi-exchange listings and cross-market context for a ticker.",
 		InputSchema: tickerSchema("Ticker to look up."),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -202,7 +206,7 @@ func (r *Registry) fullTool() Tool {
 			"ticker": strProp("Ticker to look up."),
 			"range":  strProp("Chart range: 1D, 5D, 1M, 6M, YTD, 1Y, 5Y, MAX. Default: 1M."),
 		}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			t := stringArg(args, "ticker")
 			if t == "" {
 				return nil, fmt.Errorf("ticker is required")
@@ -224,7 +228,7 @@ func (r *Registry) searchTool() Tool {
 		InputSchema: schema("Ticker search.", []string{"query"}, map[string]any{
 			"query": strProp("Search text, e.g. 'Apple' or 'THY'."),
 		}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			q := stringArg(args, "query")
 			if q == "" {
 				return nil, fmt.Errorf("query is required")
@@ -239,7 +243,7 @@ func (r *Registry) marketIndicesTool() Tool {
 		Name:        "market_indices",
 		Description: "Get major global stock indices (S&P 500, Nasdaq, Dow Jones, BIST 100, etc.).",
 		InputSchema: schema("No arguments.", nil, map[string]any{}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			return r.fetchJSON(ctx, "/v1/market/indices")
 		},
 	}
@@ -252,7 +256,7 @@ func (r *Registry) marketMoversTool() Tool {
 		InputSchema: schema("Market movers.", nil, map[string]any{
 			"category": strProp("Category: gainers, losers, most-active. Default: most-active."),
 		}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			cat := stringArg(args, "category")
 			if cat == "" {
 				cat = "most-active"
@@ -267,7 +271,7 @@ func (r *Registry) marketTrendingTool() Tool {
 		Name:        "market_trending",
 		Description: "Get most searched / trending assets on Google Finance.",
 		InputSchema: schema("No arguments.", nil, map[string]any{}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			return r.fetchJSON(ctx, "/v1/market/trending")
 		},
 	}
@@ -278,7 +282,7 @@ func (r *Registry) marketEarningsTool() Tool {
 		Name:        "market_earnings",
 		Description: "Get upcoming earnings calendar announcements.",
 		InputSchema: schema("No arguments.", nil, map[string]any{}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			return r.fetchJSON(ctx, "/v1/market/earnings")
 		},
 	}
@@ -289,7 +293,7 @@ func (r *Registry) marketHeadlinesTool() Tool {
 		Name:        "market_headlines",
 		Description: "Get top financial news headlines.",
 		InputSchema: schema("No arguments.", nil, map[string]any{}),
-		Call: func(ctx context.Context, f goficlient.Fetcher, args map[string]any) (any, error) {
+		Call: func(ctx context.Context, args map[string]any) (any, error) {
 			return r.fetchJSON(ctx, "/v1/market/headlines")
 		},
 	}
