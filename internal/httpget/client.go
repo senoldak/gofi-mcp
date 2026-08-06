@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,9 @@ type Client struct {
 	BaseURL string
 	Header  http.Header
 	Timeout time.Duration
+
+	httpOnce sync.Once
+	http     *http.Client
 }
 
 func New(baseURL string) *Client {
@@ -23,6 +27,18 @@ func New(baseURL string) *Client {
 		Header:  http.Header{},
 		Timeout: defaultTimeout,
 	}
+}
+
+func (c *Client) httpClient() *http.Client {
+	c.httpOnce.Do(func() {
+		c.http = &http.Client{
+			Timeout: c.Timeout,
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+			},
+		}
+	})
+	return c.http
 }
 
 func (c *Client) Get(ctx context.Context, path string) ([]byte, error) {
@@ -38,8 +54,7 @@ func (c *Client) Get(ctx context.Context, path string) ([]byte, error) {
 	if req.Header.Get("Accept") == "" {
 		req.Header.Set("Accept", "application/json")
 	}
-	client := &http.Client{Timeout: c.Timeout}
-	resp, err := client.Do(req)
+	resp, err := c.httpClient().Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("request: %w", err)
 	}

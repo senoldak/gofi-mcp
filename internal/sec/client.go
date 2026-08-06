@@ -29,7 +29,6 @@ func New(userAgent string) *Client {
 }
 
 func (c *Client) Financials(ctx context.Context, ticker string) (Financials, error) {
-	c.inner.Header.Set("User-Agent", c.userAgent)
 	cik, err := c.lookupCIK(ctx, ticker)
 	if err != nil {
 		return Financials{}, err
@@ -46,7 +45,6 @@ func (c *Client) lookupCIK(ctx context.Context, ticker string) (string, error) {
 	if tickers == nil {
 		tickers = c.inner
 	}
-	tickers.Header.Set("User-Agent", c.userAgent)
 	body, err := tickers.Get(ctx, "/files/company_tickers.json")
 	if err != nil {
 		return "", fmt.Errorf("sec tickers: %w", err)

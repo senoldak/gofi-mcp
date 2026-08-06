@@ -2,6 +2,7 @@ package httpget
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -66,5 +67,46 @@ func TestDefaultTimeoutIs30Seconds(t *testing.T) {
 	c := New("http://example.com")
 	if c.Timeout != 30*time.Second {
 		t.Fatalf("Timeout = %v, want 30s", c.Timeout)
+	}
+}
+
+func TestGetReusesHTTPClient(t *testing.T) {
+	c := New("http://example.com")
+	h1 := c.httpClient()
+	h2 := c.httpClient()
+	if h1 != h2 {
+		t.Fatalf("httpClient should be reused across Get calls")
+	}
+}
+
+func TestConcurrentGetsAreSafe(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("ok"))
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL)
+	c.Header.Set("User-Agent", "TestAgent/1.0")
+
+	const n = 16
+	done := make(chan error, n)
+	for i := 0; i < n; i++ {
+		go func() {
+			body, err := c.Get(context.Background(), "/")
+			if err != nil {
+				done <- err
+				return
+			}
+			if string(body) != "ok" {
+				done <- fmt.Errorf("body=%s", body)
+				return
+			}
+			done <- nil
+		}()
+	}
+	for i := 0; i < n; i++ {
+		if err := <-done; err != nil {
+			t.Fatalf("concurrent Get error: %v", err)
+		}
 	}
 }
